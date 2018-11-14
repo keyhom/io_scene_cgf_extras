@@ -1,34 +1,7 @@
 import os, sys, logging, optparse
 import bpy
-import bpy.props
-import bpy_extras
-import mathutils
-
-from mathutils import Vector, Matrix
-from bpy.props import(
-        BoolProperty,
-        FloatProperty,
-        StringProperty,
-        EnumProperty,
-        CollectionProperty,
-        )
-
-from bpy_extras.io_utils import (
-        ImportHelper,
-        orientation_helper_factory,
-        path_reference_mode,
-        axis_conversion,
-        _check_axis_conversion
-        )
 
 curdir = os.path.abspath(os.path.dirname(__file__))
-
-def setup_env():
-    sys.path.append(os.path.expanduser('~/Projects/github/pyffi/build/lib'))
-    sys.path.append(os.path.abspath(os.path.join(curdir, '..', 'io_scene_cgf')))
-    import import_cgf
-    filename = os.path.abspath(os.path.join(curdir, '..', 'io_scene_cgf', '__init__.py'))
-    exec(compile(open(filename, 'rb').read(), filename, 'exec'))
 
 def run(argv=None):
     if argv is None:
@@ -49,12 +22,7 @@ def run(argv=None):
             default=False,
             action='store_true')
 
-    #  print('System argv: ')
-    #  print(argv)
-
     (keywords, positional) = parser.parse_args(argv)
-
-    # setup_env()
 
     # Force the render engine to CYCLES
     bpy.context.scene.render.engine = 'CYCLES'
@@ -63,11 +31,11 @@ def run(argv=None):
     bpy.ops.object.select_all(action='SELECT') # select all object
     bpy.ops.object.delete() # delete all select objects.
 
-    #  sFilePath = '/Users/jeremy/Projects/aion_assets/Objects/monster/phiviyong/phiviyong.cgf'
     sFilePath = positional[0] if len(positional) > 0 else None
     bIncludeAnimations = keywords.anim
 
     if sFilePath is None:
+        print('No input files specified.')
         return
 
     bpy.ops.import_scene.cgf(filepath=sFilePath, import_animations=bIncludeAnimations)
