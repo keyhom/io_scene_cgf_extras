@@ -85,10 +85,18 @@ Convert file format `DDS` to `PNG`.
 
 `dds2png.py` require module `PIL`.
 
-Install the `PIL` module via `pip`, like below:
+Install the `PIL` module via `pip`, following below:
+
+On `python 2.x`:
 
 ```
 pip install image
+```
+
+On `python 3.x`, choose `pillow` instead of `image`:
+
+```
+pip install pillow
 ```
 
 #### Usage
