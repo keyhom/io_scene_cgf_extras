@@ -19,6 +19,10 @@ def run(args=None):
             epilog=''
             )
 
+    parser.add_option('-d', '--directory', type='string', default=None,
+            action='store',
+            help='Searching for DDS.')
+
     parser.add_option('-v', '--verbose',
             default=False,
             action='store_true',
@@ -28,13 +32,22 @@ def run(args=None):
 
     input_lines = []
 
-    if len(positional) == 0:
+    directory = keywords.directory
+
+    if not directory and len(positional) == 0:
         parser.print_help()
         exit(0)
+    elif directory and len(positional) == 0:
+        for root, dirs, files in os.walk(directory):
+            # ignore dirs, filtering .dds
+            for f in files:
+                if f.endswith('.dds') and not f.startswith('_') and not f.startswith('.'):
+                    input_lines.append(os.path.join(root, f))
     elif positional[0] == '-':
         # read from the stdin
         input_lines = sys.stdin.readlines()
         positional = positional[1:]
+
 
     if keywords.verbose:
         LOG.setLevel(logging.DEBUG)
