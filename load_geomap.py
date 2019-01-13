@@ -162,7 +162,7 @@ def load_map(map_file_path, models_dir=None):
                 layer_idx = name_groups.index(name_prefix)
                 ob = bpy.data.objects.new(me.name, me)
                 ob.location = (x, y, z)
-                ob.rotation_quaternion = mat.to_quaternion()
+                ob.rotation_euler = mat.to_euler()
                 bpy.context.scene.objects.link(ob)
                 ob.layers[layer_idx] = True
                 ob.layers[0] = False
