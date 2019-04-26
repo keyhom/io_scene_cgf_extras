@@ -151,6 +151,7 @@ def load_map(map_file_path, models_dir=None):
         geo_name = geo_name.decode()
         geo_name = geo_name.replace('\\', os.path.sep)
         geo_path = os.path.join(models_dir, os.path.basename(geo_name))
+        logging.error(geo_name)
 
         if os.path.exists(geo_path):
             me = load_terrain_mesh(os.path.basename(geo_name), models_dir)
@@ -219,6 +220,8 @@ def parse_arguments(argv):
 
     if keywords.verbose:
         logging.root.setLevel(logging.DEBUG)
+    else:
+        logging.root.setLevel(logging.ERROR)
 
     logging.debug('Geometry Dir: %s' % keywords.geometry_dir)
     logging.debug('Map file: %s' % positional[0])
