@@ -1,9 +1,26 @@
 #!/usr/bin/env python
 
 import os, sys, logging, optparse
-import bpy
+import importlib
 
-curdir = os.path.abspath(os.path.dirname(__file__))
+bpy_in='bpy' in locals()
+
+if not bpy_in:
+    try:
+        importlib.import_module('bpy')
+        bpy_in = True
+    except:
+        bpy_in = False
+
+if bpy_in:
+    import bpy
+    import bpy_extras
+    import mathutils
+
+try:
+    curdir = os.path.abspath(os.path.dirname(__file__))
+except:
+    curdir = ''
 
 def run(argv=None):
     if argv is None:
@@ -24,6 +41,14 @@ def run(argv=None):
             default=False,
             action='store_true')
 
+    parser.add_option('--output-directory',
+            type='string', action='store', dest='output_directory',
+            )
+
+    parser.add_option('-v', '--verbose',
+            default=False, action='store_true'
+            )
+
     (keywords, positional) = parser.parse_args(argv)
 
     # Force the render engine to CYCLES
@@ -42,7 +67,11 @@ def run(argv=None):
 
     bpy.ops.import_scene.cgf(filepath=sFilePath, import_animations=bIncludeAnimations)
 
-    fbx_filepath = os.path.splitext(sFilePath)[0]
+    if keywords.output_directory:
+        fbx_filepath = os.path.join(os.path.abspath(os.path.expanduser(keywords.output_directory)), os.path.splitext(os.path.basename(sFilePath))[0])
+    else:
+        fbx_filepath = os.path.splitext(sFilePath)[0]
+
     object_types = None
 
     if keywords.anim_only:
@@ -51,7 +80,6 @@ def run(argv=None):
     else:
         fbx_filepath += '.fbx'
         object_types = { 'ARMATURE', 'MESH' }
-
 
     # Imported
     # Exported the scene as FBX output.
