@@ -50,6 +50,11 @@ def process_arguments(argv):
     parser.add_option('-b', '--blender', default='blender',
             action='store')
 
+    parser.add_option('-a', '--anim', default=False, action='store_true')
+    parser.add_option('--anim_only', default=False, action='store_true')
+    parser.add_option('-s', '--save-temp', default=False, action='store_true')
+    parser.add_option('--skeleton', default=None, type='string', action='store')
+
     parser.add_option('-j', '--join', default=0, action='store', type='int')
 
     keywords, positional = parser.parse_args(argv)
@@ -58,7 +63,11 @@ def process_arguments(argv):
 
 def get_output_path(src_path, src_dir, dest_dir, follow=False):
     if not follow:
-        return os.path.join(dest_dir, os.path.basename(src_path)) + '.cgf'
+        exts = os.path.splitext(src_path)
+        ext = '.cgf'
+        if len(exts) > 1:
+            ext = exts[1]
+        return os.path.join(dest_dir, os.path.basename(src_path)) + ext
     else:
         if src_dir and src_path.startswith(src_dir):
             path = os.path.relpath(src_path, src_dir)
@@ -89,7 +98,7 @@ def run(argv=None):
         if filepath.endswith('.lst') and os.path.exists(filepath):
             with open(filepath, 'r') as f:
                 cgf_lists.extend(f.readlines())
-        elif filepath.endswith('.cgf'):
+        elif filepath.endswith('.cgf') or filepath.endswith('.caf'):
             cgf_lists.append(filepath)
 
     if len(cgf_lists) == 0:
@@ -109,6 +118,19 @@ def run(argv=None):
         CORES = keywords.join
 
     print('CORES: %d' % CORES)
+    print('blender executable: %s' % blender_executable)
+
+    addition_args = []
+
+    if keywords.anim:
+        addition_args.append('--anim')
+    if keywords.anim_only:
+        addition_args.append('--anim_only')
+    if keywords.save_temp:
+        addition_args.append('--save_temp')
+    if keywords.skeleton:
+        keywords.skeleton = os.path.expanduser(keywords.skeleton)
+        addition_args.append('--skeleton=%s' % keywords.skeleton)
 
     if len(cgf_lists):
         for cgf_path in cgf_lists:
@@ -122,7 +144,7 @@ def run(argv=None):
 
             output = get_output_path(cgf_path, keywords.directory, keywords.output_directory, keywords.keep_structure)
 
-            if os.path.isfile(output) or output.endswith('.cgf'):
+            if os.path.isfile(output) or output.endswith('.cgf') or output.endswith('.caf'):
                 output_dir = os.path.dirname(output)
             else:
                 output_dir = output
@@ -133,7 +155,7 @@ def run(argv=None):
             except:
                 pass
 
-            commands.append([blender_executable, '-b', '--python', 'cgf2fbx.py', '--', '--output-directory=%s' % output_dir, cgf_path])
+            commands.append([blender_executable, '-b', '--python', 'cgf2fbx.py', '--', '--output-directory=%s' % output_dir, cgf_path] + addition_args)
 
     if len(commands):
         run_commands(commands)
