@@ -49,6 +49,12 @@ def run(argv=None):
             default=False, action='store_true'
             )
 
+    parser.add_option('-s', '--save-temp',
+            default=False, action='store_true', dest='save_temp')
+
+    parser.add_option('-k', '--skeleton',
+            default=None, type='string', action='store')
+
     (keywords, positional) = parser.parse_args(argv)
 
     # Force the render engine to CYCLES
@@ -59,11 +65,38 @@ def run(argv=None):
     bpy.ops.object.delete() # delete all select objects.
 
     sFilePath = positional[0] if len(positional) > 0 else None
-    bIncludeAnimations = keywords.anim
 
     if sFilePath is None:
         print('No input files specified.')
         return
+
+    if sFilePath.endswith('.caf'):
+        keywords.anim = True
+
+    bIncludeAnimations = keywords.anim
+    bSkeletonLoad = False
+    bSaveTemp = keywords.save_temp
+
+    if bIncludeAnimations and sFilePath.endswith('.caf'): # Just a regular animation file, must be provided a skeleton to be driven.
+        if keywords.skeleton is None:
+            print('Need a skeleton specified by arguments!!')
+            exit(1)
+        else:
+            bSkeletonLoad = True
+
+    if keywords.verbose:
+        print("Input file: %s" % sFilePath)
+        print("Skeleton: %s" % keywords.skeleton)
+        print("Output Directory: %s" % keywords.output_directory)
+        print("Anim: %d" % keywords.anim)
+        print("AnimOnly: %d" % keywords.anim_only)
+
+    if bSkeletonLoad:
+        if os.path.exists(keywords.skeleton) == False:
+            print('Invalid skeleton file!!')
+            exit(1)
+        else:
+            bpy.ops.import_scene.cgf(filepath=os.path.abspath(keywords.skeleton), import_animations=False)
 
     bpy.ops.import_scene.cgf(filepath=sFilePath, import_animations=bIncludeAnimations)
 
@@ -79,13 +112,16 @@ def run(argv=None):
         object_types = { 'ARMATURE' }
     else:
         fbx_filepath += '.fbx'
-        object_types = { 'ARMATURE', 'MESH' }
+        if sFilePath.endswith('.caf'):
+            object_types = { 'ARMATURE' }
+        else:
+            object_types = { 'ARMATURE', 'MESH' }
 
     # Imported
     # Exported the scene as FBX output.
     bpy.ops.export_scene.fbx(
             filepath=fbx_filepath,
-            axis_forward = 'Z',
+            axis_forward = '-Z',
             axis_up = 'Y',
             bake_space_transform = True,
             object_types = object_types,
@@ -98,13 +134,18 @@ def run(argv=None):
             bake_anim_use_all_actions = True,
             bake_anim_force_startend_keying = False,
             bake_anim_step = 1,
-            bake_anim_simplify_factor = 0,
+            bake_anim_simplify_factor = 1,
             use_anim = True,
             use_anim_action_all = True,
             use_default_take = True,
             use_anim_optimize = True,
             anim_optimize_precision = 6,
         )
+
+    if bSaveTemp:
+        savetemp_file = os.path.splitext(fbx_filepath)[0] + '.blend'
+        print('Save as temp blend: %s' % savetemp_file)
+        bpy.ops.wm.save_as_mainfile(filepath=savetemp_file)
 
 if __name__ == '__main__':
     run()
