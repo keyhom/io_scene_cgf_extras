@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import os, sys, optparse, logging, struct
 import importlib
 
@@ -27,7 +28,111 @@ except:
 def unpack(fio, fmt):
     return struct.unpack(fmt, fio.read(struct.calcsize(fmt)))
 
-def read_map(map_file):
+name_resolves = {}
+
+def parse_geoname(geo_name, game_dir):
+    if game_dir is None or not os.path.exists(game_dir):
+        return geo_name
+    if geo_name.lower().startswith(b'terrain_models\\') or geo_name.lower().endswith(b'.bin'):
+        return geo_name
+    if not geo_name.lower().endswith(b'.cgf'):
+        return geo_name
+
+    if geo_name.lower().startswith(b'models\\'):
+        geo_name = geo_name[7:]
+
+
+    name = geo_name.lower()
+
+    try:
+        name = name.decode()
+    except:
+        pass
+
+    if name in name_resolves:
+        return name_resolves[name]
+
+    def resolve_valid_path(folder, name):
+        if name is None or len(name) == 0:
+            return None
+
+        folder = '' if folder is None else folder
+
+        if os.path.exists(os.path.join(folder, name)):
+            return None
+
+        start_index = 0
+        end_index = -1
+        while True:
+            try:
+                idx = name.rindex('_', start_index, end_index)
+                end_index = idx - 1
+            except ValueError:
+                idx = -1
+
+            if idx != -1:
+                if name[idx + 1] == ' ': # Ignore
+                    continue
+
+                str2find = name[:idx]
+                if os.path.exists(os.path.join(folder, str2find)):
+                    #  print('Found: %s + %s' % (str2find, name[idx + 1:]))
+                    return (str2find, name[idx + 1:])
+            else:
+                break
+        return None
+
+    parent = game_dir
+    child = name
+    result = None
+
+    while True:
+        result = resolve_valid_path(parent, child)
+        if result is not None:
+            if parent is None:
+                parent = result[0]
+            else:
+                parent = os.path.join(parent, result[0])
+            child = result[1]
+        else:
+            break
+
+    def fixed_basename(name):
+        try:
+            basename = os.path.basename(name)
+            basename.index('__')
+            if not os.path.exists(name):
+                basename = basename.replace('__', '_ ')
+            if os.path.exists(os.path.join(os.path.dirname(name), basename)):
+                name = os.path.join(os.path.dirname(name), basename)
+        except ValueError:
+            pass
+
+        if not os.path.exists(name):
+            basename = os.path.basename(name)
+            for filename in os.listdir(os.path.dirname(name)):
+                if filename.replace('_', ' ').lower() == basename.replace('_', ' ').lower():
+                    name = os.path.join(os.path.dirname(name), filename)
+                    break
+        return name
+
+    result = name
+
+    if parent is None:
+        result = child
+    else:
+        result = os.path.join(parent, child)
+
+    if not os.path.exists(result):
+        result = fixed_basename(result)
+
+    name_resolves[name] = result
+    return result
+
+dump_output = None
+
+def read_map(map_file, resolve_name=False, game_dir=None, dump=False):
+
     with open(map_file, 'rb') as mf:
         mf.seek(0, 2)
         bufsize = mf.tell()
@@ -48,17 +153,45 @@ def read_map(map_file):
         max_y = None
         max_z = None
 
+        def dump2(content, end=os.linesep):
+            global dump_output
+            if dump:
+                if dump_output is None:
+                    dump_output = ''
+                dump_output += "%s%c" % (content, end)
+            else:
+                print(content, end=end)
+
+        if dump:
+            # print header.
+            dump2('Path', end='\t')
+            dump2('Valid', end='\t')
+            dump2('x', end='\t')
+            dump2('y', end='\t')
+            dump2('z', end='\t')
+            dump2('m00', end='\t')
+            dump2('m01', end='\t')
+            dump2('m02', end='\t')
+            dump2('m10', end='\t')
+            dump2('m11', end='\t')
+            dump2('m12', end='\t')
+            dump2('m20', end='\t')
+            dump2('m21', end='\t')
+            dump2('m22', end='\t')
+            dump2('unk')
+
         geo_lists = []
 
         for i in range(geo_count):
             name_len = unpack(mf, '<h')
-            name, x, y, z = unpack(mf, '<%ds3f' % name_len)
-            #  logging.debug('Geometry Name: %s' % name.decode())
+            geo_name, x, y, z = unpack(mf, '<%ds3f' % name_len)
+            #  logging.debug('Geometry Name: %s' % geo_name.decode())
             #  logging.debug('Geometry Local Axis: %.4f, %.4f, %.4f' % (x, y, z))
             m00, m01, m02, \
             m10, m11, m12, \
             m20, m21, m22 = unpack(mf, '<9f')
-            _, = unpack(mf, '<i') # unknown
+            unk, = unpack(mf, '<f') # unknown
+
             if min_x is None: min_x = x
             if min_y is None: min_y = y
             if min_z is None: min_z = z
@@ -73,7 +206,43 @@ def read_map(map_file):
             max_y = max(y, max_y)
             max_z = max(z, max_z)
 
-            geo_lists.append((name, x, y, z, m00, m01, m02, m10, m11, m12, m20, m21, m22))
+            geo_lists.append((geo_name, x, y, z, m00, m01, m02, m10, m11, m12, m20, m21, m22))
+
+            name = geo_name
+            if resolve_name:
+                if geo_name.lower().startswith(b'terrain_models\\') or \
+                        geo_name.lower().endswith(b'.bin'):
+                    continue
+
+                name = parse_geoname(geo_name, game_dir)
+                try:
+                    name = name.decode()
+                except:
+                    pass
+
+            if name.startswith(game_dir):
+                name = os.path.relpath(name, game_dir)
+                name = name[0].upper() + name[1:]
+            dump2(name, end='\t')
+            dump2(os.path.exists(os.path.join(game_dir, name)), end='\t')
+            dump2(x, end='\t')
+            dump2(y, end='\t')
+            dump2(z, end='\t')
+            dump2(m00, end='\t')
+            dump2(m01, end='\t')
+            dump2(m02, end='\t')
+            dump2(m10, end='\t')
+            dump2(m11, end='\t')
+            dump2(m12, end='\t')
+            dump2(m20, end='\t')
+            dump2(m21, end='\t')
+            dump2(m22, end='\t')
+            dump2(unk)
+
+
+        if dump_output is not None:
+            with open(os.path.basename(os.path.splitext(map_file)[0]) + '.csv', 'w') as csv_file:
+                csv_file.write(dump_output)
 
         logging.debug('minXYZ: %.4f, %.4f, %.4f' % (min_x, min_y, min_z))
         logging.debug('maxXYZ: %.4f, %.4f, %.4f' % (max_x, max_y, max_z))
@@ -151,7 +320,6 @@ def load_map(map_file_path, models_dir=None):
         geo_name = geo_name.decode()
         geo_name = geo_name.replace('\\', os.path.sep)
         geo_path = os.path.join(models_dir, os.path.basename(geo_name))
-        logging.error(geo_name)
 
         if os.path.exists(geo_path):
             me = load_terrain_mesh(os.path.basename(geo_name), models_dir)
@@ -194,15 +362,13 @@ def parse_arguments(argv):
             action='store_true',
             help=('Verbose logging trace'))
 
-    #  parser.add_option('-m', '--map',
-            #  default=False,
-            #  action='store_true',
-            #  help='Specified the input file is a map.')
+    parser.add_option('--game-dir', action='store', type='string', default=None,
+            dest='game_dir', help='Specified the game working directory, usage for searching files.')
 
-    #  parser.add_option('-g', '--geometry',
-            #  default=False,
-            #  action='store_true',
-            #  help='Specified the input file is a geometry.')
+    parser.add_option('--resolve-name', action='store_true', default=True,
+            dest='resolve_name', help='Specified to resolve the asset path by geoname.')
+
+    parser.add_option('--csv', action='store_true', default=False)
 
     parser.add_option('-d', '--geometry-dir',
             action='store', type='string', dest='geometry_dir',
@@ -213,10 +379,6 @@ def parse_arguments(argv):
     if len(positional) == 0:
         parser.print_help()
         return
-
-    #  if not keywords.map and not keywords.geometry:
-        #  parser.print_help()
-        #  return
 
     if keywords.verbose:
         logging.root.setLevel(logging.DEBUG)
@@ -251,11 +413,7 @@ def run(argv=None):
             logging.warning("Non exist input file: %s" % input_file)
             continue
 
-        read_map(os.path.abspath(input_file))
-        #  if keywords.map:
-            #  read_map(os.path.abspath(input_file))
-        #  elif keywords.geometry:
-            #  read_geometry(os.path.abspath(input_file))
+        read_map(os.path.abspath(input_file), keywords.resolve_name, keywords.game_dir, keywords.csv)
 
     logging.debug('Done!')
 
