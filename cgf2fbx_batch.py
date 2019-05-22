@@ -84,9 +84,12 @@ def run(argv=None):
     else:
         logging.root.setLevel(logging.ERROR)
 
-    if len(positional) == 0:
-        parser.print_help()
-        return
+    if sys.stdin.isatty():
+        if len(positional) == 0:
+            parser.print_help()
+            return
+    else:
+        positional = list(map(lambda x: x.rstrip('\n').rstrip('\r'), sys.stdin.readlines()))
 
     inputs = []
     cgf_lists = []
