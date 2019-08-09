@@ -49,9 +49,9 @@ def run(args = None):
     if len(positional) > 0:
         input_files = input_files  + positional
 
-    if len(input_files) == 0:
-        parser.print_help()
-        return
+    #  if len(input_files) == 0:
+        #  parser.print_help()
+        #  return
 
     logging.root.setLevel(logging.INFO)
 

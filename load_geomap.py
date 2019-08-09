@@ -131,7 +131,7 @@ def parse_geoname(geo_name, game_dir):
 
 dump_output = None
 
-def read_map(map_file, resolve_name=False, game_dir=None, dump=False):
+def read_map(map_file, resolve_name=False, game_dir=b'', dump=False):
 
     with open(map_file, 'rb') as mf:
         mf.seek(0, 2)
@@ -220,25 +220,26 @@ def read_map(map_file, resolve_name=False, game_dir=None, dump=False):
                 except:
                     pass
 
-            if name.startswith(game_dir):
+            if len(game_dir) and name.startswith(game_dir):
                 name = os.path.relpath(name, game_dir)
                 name = name[0].upper() + name[1:]
-            dump2(name, end='\t')
-            dump2(os.path.exists(os.path.join(game_dir, name)), end='\t')
-            dump2(x, end='\t')
-            dump2(y, end='\t')
-            dump2(z, end='\t')
-            dump2(m00, end='\t')
-            dump2(m01, end='\t')
-            dump2(m02, end='\t')
-            dump2(m10, end='\t')
-            dump2(m11, end='\t')
-            dump2(m12, end='\t')
-            dump2(m20, end='\t')
-            dump2(m21, end='\t')
-            dump2(m22, end='\t')
-            dump2(unk)
 
+            if dump:
+                dump2(name, end='\t')
+                dump2(os.path.exists(os.path.join(game_dir, name)), end='\t')
+                dump2(x, end='\t')
+                dump2(y, end='\t')
+                dump2(z, end='\t')
+                dump2(m00, end='\t')
+                dump2(m01, end='\t')
+                dump2(m02, end='\t')
+                dump2(m10, end='\t')
+                dump2(m11, end='\t')
+                dump2(m12, end='\t')
+                dump2(m20, end='\t')
+                dump2(m21, end='\t')
+                dump2(m22, end='\t')
+                dump2(unk)
 
         if dump_output is not None:
             with open(os.path.basename(os.path.splitext(map_file)[0]) + '.csv', 'w') as csv_file:
@@ -362,7 +363,7 @@ def parse_arguments(argv):
             action='store_true',
             help=('Verbose logging trace'))
 
-    parser.add_option('--game-dir', action='store', type='string', default=None,
+    parser.add_option('--game-dir', action='store', type='string', default='',
             dest='game_dir', help='Specified the game working directory, usage for searching files.')
 
     parser.add_option('--resolve-name', action='store_true', default=True,
