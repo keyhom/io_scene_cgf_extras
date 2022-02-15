@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, sys, logging, optparse, multiprocessing, subprocess
+import os, sys, logging, optparse, multiprocessing, subprocess, re
 from subprocess import Popen, CalledProcessError, PIPE, STDOUT
 
 stdout = None
@@ -54,14 +54,27 @@ def process_arguments(argv):
     parser.add_option('--anim_only', default=False, action='store_true')
     parser.add_option('-s', '--save-temp', default=False, action='store_true')
     parser.add_option('--skeleton', default=None, type='string', action='store')
+    parser.add_option('--resolve-collapse-name', default=False, action='store_true', dest='resolve_collapse_name')
 
     parser.add_option('-j', '--join', default=0, action='store', type='int')
 
     keywords, positional = parser.parse_args(argv)
 
+    if keywords.verbose:
+        print('- Input arguments:')
+        kws = list(filter(lambda x: not x.startswith('_') and x != 'read_file' and x != 'ensure_value' and x !=
+            'read_module', dir(keywords)))
+        for k in iter(kws):
+            print('  - %s = %s' % (k, keywords.__getattribute__(k)))
+        print()
+        print('- Positionals:')
+        for k in iter(positional):
+            print('  - %s' % k)
+        print()
+
     return (parser, keywords, positional)
 
-def get_output_path(src_path, src_dir, dest_dir, follow=False):
+def get_output_path(src_path, src_dir, dest_dir, follow=False, resolve_collapse_name=False):
     if not follow:
         exts = os.path.splitext(src_path)
         ext = '.cgf'
@@ -74,7 +87,19 @@ def get_output_path(src_path, src_dir, dest_dir, follow=False):
         else:
             path = src_path
 
-        return os.path.join(dest_dir, path)
+        target_path = os.path.join(dest_dir, path)
+        if resolve_collapse_name is True:
+            exts = os.path.splitext(target_path)
+            ext = '.cgf'
+            if len(exts) > 1:
+                ext = exts[1]
+
+            searchObj = re.search( r'(.*)_(\d{2}\w).*' , os.path.basename(target_path), re.I)
+
+            if searchObj:
+                target_path = os.path.join(os.path.dirname(target_path), searchObj.group(1), os.path.basename(target_path)) + ext
+
+        return target_path
 
 def run(argv=None):
     parser, keywords, positional = process_arguments(argv)
@@ -105,7 +130,7 @@ def run(argv=None):
             cgf_lists.append(filepath)
 
     if len(cgf_lists) == 0:
-        logging.ERROR('No availiable CGF files processing.')
+        logging.error('No availiable CGF files processing.')
         return
 
     cgf_lists = list(map(lambda x: os.path.join(keywords.directory, x), cgf_lists))
@@ -130,7 +155,7 @@ def run(argv=None):
     if keywords.anim_only:
         addition_args.append('--anim_only')
     if keywords.save_temp:
-        addition_args.append('--save_temp')
+        addition_args.append('--save-temp')
     if keywords.skeleton:
         keywords.skeleton = os.path.expanduser(keywords.skeleton)
         addition_args.append('--skeleton=%s' % keywords.skeleton)
@@ -145,7 +170,7 @@ def run(argv=None):
             if not exists:
                 continue
 
-            output = get_output_path(cgf_path, keywords.directory, keywords.output_directory, keywords.keep_structure)
+            output = get_output_path(cgf_path, keywords.directory, keywords.output_directory, keywords.keep_structure, keywords.resolve_collapse_name)
 
             if os.path.isfile(output) or output.endswith('.cgf') or output.endswith('.caf'):
                 output_dir = os.path.dirname(output)

@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 import os, sys, logging, optparse, struct
+from PIL import Image
 
-default_options={
-        'resolution': '1536x1536'
-        }
+#  default_options={
+        #  'resolution': '1536x1536'
+        #  }
 
 def process_options(argv=None):
     if not argv:
@@ -18,7 +19,7 @@ def process_options(argv=None):
     parser.add_option('-o', '--output', action='store', type='string',
             help="Specified the output destination!")
 
-    parser.add_option('-x', '--resolution', action='store', type='string',
+    parser.add_option('-x', '--resolution', action='store', type='string', default='1536x1536',
             help="Specified the width & height.")
 
     parser.add_option('-v', '--verbose', action='store_true', default=False,
@@ -28,6 +29,8 @@ def process_options(argv=None):
 
     if keywords.verbose:
         logging.root.setLevel(logging.DEBUG)
+    else:
+        logging.root.setLevel(logging.INFO)
 
     if not keywords.output:
         logging.debug('No output destination specified!')
@@ -38,9 +41,9 @@ def process_options(argv=None):
     if len(positional) == 0:
         logging.debug('No input file specified!')
 
-    for k in default_options.keys():
-        if not keywords.__getattribute__(k):
-            keywords.__setattr__(k, default_options[k])
+    #  for k in default_options.keys():
+        #  if not keywords.__getattribute__(k):
+            #  keywords.__setattr__(k, default_options[k])
 
     return (parser, keywords, positional)
 
@@ -60,6 +63,27 @@ def read_h32(a_file, width, height):
         bufread = 0
         data = []
 
+        image = None
+        #  image = Image.new('RGB', (width, height))
+
+        #  for x in range(width):
+            #  for y in range(height):
+                #  r, g, b = unpack(f, '<3B')
+                #  bufread = bufread + 3
+                #  image.paste((r, g, b), (y, x, y + 1, x + 1));
+                # image.paste((r, g, b), (x, y, x + 1, y + 1));
+
+        #  w  = int(image.size[0] * (2048.0/width))
+        #  h = int(image.size[1] * (2048.0/height))
+        #  image = image.resize((w, h))
+
+        #  for x in range(2048):
+            #  for y in range(2048):
+                #  r, g, b = image.getpixel((x, y))
+                #  h = g * 1.0 / 255.0 + r * 1.0 / 255.0 / 255.0 + b * 1.0 / 255.0 / 255.0 / 255.0 # GRB => Height(0~1)
+                #  h = int(h * 65535.0) # Range to unsigned short
+                #  data.append(h)
+
         for x in range(width):
             for y in range(height):
                 r, g, b = unpack(f, '<3B')
@@ -69,18 +93,24 @@ def read_h32(a_file, width, height):
                 h = int(h * 65535.0) # Range to unsigned short
                 data.append(h)
 
-        assert bufread == bufsize, "There're remaining %i buffer size, incorrect resolution specified?" % (bufsize - bufread)
-        return data
+        # assert bufread == bufsize, "There're remaining %i buffer size, incorrect resolution specified?" % (bufsize - bufread)
+        return data, image
     return None
 
 def do_convert(input_file, width, height, output_file):
-    data = read_h32(input_file, width, height)
+    data, image = read_h32(input_file, width, height)
+
+    if image:
+        image.save(output_file + '.png')
 
     if data:
+        logging.debug("The final output path is: %s" % output_file)
+
         with open(output_file, 'wb') as f:
             for x in range(width):
                 for y in range(height):
-                    f.write(struct.pack('<H', data[x * width + y]))
+                    f.write(struct.pack('<H', data[y * width + x]))
+                    #  f.write(struct.pack('<H', data[x * width + y]))
 
             logging.debug('Done!')
 
