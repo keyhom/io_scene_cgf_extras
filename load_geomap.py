@@ -131,7 +131,7 @@ def parse_geoname(geo_name, game_dir):
 
 dump_output = None
 
-def read_map(map_file, resolve_name=False, game_dir=b'', dump=False):
+def read_map(map_file, resolve_name=False, game_dir=b'', terrain_only=False, dump=False):
 
     with open(map_file, 'rb') as mf:
         mf.seek(0, 2)
@@ -205,6 +205,9 @@ def read_map(map_file, resolve_name=False, game_dir=b'', dump=False):
             max_x = max(x, max_x)
             max_y = max(y, max_y)
             max_z = max(z, max_z)
+
+            if terrain_only and not geo_name.startswith(b'terrain_models\\'):
+                continue
 
             geo_lists.append((geo_name, x, y, z, m00, m01, m02, m10, m11, m12, m20, m21, m22))
 
@@ -304,12 +307,12 @@ def load_models(models_dir):
     for mf_name in model_names:
         load_terrain_mesh(mf_name, models_dir)
 
-def load_map(map_file_path, models_dir=None):
+def load_map(map_file_path, models_dir=None, terrain_only=False):
     if not os.path.exists(map_file_path) or not os.path.isfile(map_file_path):
-        print(stderr, 'Non exists map file ...')
+        print(sys.stderr, 'Non exists map file ...')
         return
 
-    geo_list = read_map(map_file_path)
+    geo_list = read_map(map_file_path, terrain_only=terrain_only)
     name_groups = []
 
     for geo in geo_list:
@@ -333,15 +336,21 @@ def load_map(map_file_path, models_dir=None):
                 ob = bpy.data.objects.new(me.name, me)
                 ob.location = (x, y, z)
                 ob.rotation_euler = mat.to_euler()
-                bpy.context.scene.objects.link(ob)
-                ob.layers[layer_idx] = True
-                ob.layers[0] = False
+                # bpy.context.scene.collection.objects.link(ob)
+                if bpy.data.collections.find('geo_collection_%d' % layer_idx) == -1:
+                    bpy.data.collections.new('geo_collection_%d' % layer_idx)
+                bpy.data.collections['geo_collection_%d' % layer_idx].objects.link(ob)
+                # ob.layers[layer_idx] = True
+                # ob.layers[0] = False
         else:
             logging.warning('Non exists geometry: %s' % geo_path)
 
     for i in range(len(name_groups)):
-        bpy.context.scene.layers[i] = True
-    bpy.context.scene.update()
+        bpy.context.scene.collection.children.link(bpy.data.collections['geo_collection_%d' % i])
+    # bpy.context.scene.update()
+
+    # for k in bpy.data.screens.keys():
+    #     bpy.data.screens[k].
 
 def clear_all_data():
     for k in bpy.data.objects.values():
@@ -349,6 +358,9 @@ def clear_all_data():
 
     for k in bpy.data.meshes.values():
         bpy.data.meshes.remove(k)
+
+    for k in bpy.data.collections.values():
+        bpy.data.collections.remove(k)
 
 def parse_arguments(argv):
     if not argv:
@@ -368,6 +380,9 @@ def parse_arguments(argv):
 
     parser.add_option('--resolve-name', action='store_true', default=True,
             dest='resolve_name', help='Specified to resolve the asset path by geoname.')
+
+    parser.add_option('--terrain-only', action='store_true', default=False,
+            dest='terrain_only', help='Specified to resolve the terrain data only.')
 
     parser.add_option('--csv', action='store_true', default=False)
 
@@ -393,16 +408,21 @@ def parse_arguments(argv):
 
 def run_in_blender(argv=None, clean=False):
     if not argv:
-        idx = sys.argv.index('--')
+        try:
+            idx = sys.argv.index('--')
+        except:
+            idx = -1
         if idx > -1:
             argv = sys.argv[idx+1:]
+    else:
+        argv = []
 
     keywords, positional = parse_arguments(argv)
 
     if clean:
         clear_all_data()
 
-    load_map(positional[0], keywords.geometry_dir)
+    load_map(positional[0], keywords.geometry_dir, keywords.terrain_only)
 
 def run(argv=None):
     keywords, positional = parse_arguments(argv)
@@ -414,7 +434,7 @@ def run(argv=None):
             logging.warning("Non exist input file: %s" % input_file)
             continue
 
-        read_map(os.path.abspath(input_file), keywords.resolve_name, keywords.game_dir, keywords.csv)
+        read_map(os.path.abspath(input_file), keywords.resolve_name, keywords.game_dir, keywords.terrain_only, keywords.csv)
 
     logging.debug('Done!')
 
