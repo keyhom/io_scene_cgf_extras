@@ -64,7 +64,10 @@ def run(argv=None):
     bpy.ops.object.select_all(action='SELECT') # select all object
     bpy.ops.object.delete() # delete all select objects.
 
-    sFilePath = positional[0] if len(positional) > 0 else None
+    if bpy_in:
+        sFilePath = cgf_file
+    else:
+        sFilePath = positional[0] if len(positional) > 0 else None
 
     if sFilePath is None:
         print('No input files specified.')
@@ -99,6 +102,9 @@ def run(argv=None):
             bpy.ops.import_scene.cgf(filepath=os.path.abspath(keywords.skeleton), import_animations=False)
 
     bpy.ops.import_scene.cgf(filepath=sFilePath, import_animations=bIncludeAnimations)
+
+    if bpy_in: # No export instead.
+        return
 
     if keywords.output_directory:
         fbx_filepath = os.path.join(os.path.abspath(os.path.expanduser(keywords.output_directory)), os.path.splitext(os.path.basename(sFilePath))[0])

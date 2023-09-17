@@ -51,7 +51,7 @@ More information about how to execute with `Blender`, see [Tips and Tricks in bl
 
 ### cgf2fbx.py
 
-Convert ___CGF/CAF___ file format to ___fbx___, including the **Meshes**, **Armatures**, **Animations**, **Materials**, etc.
+Convert ___CGF/CAF/CGA___ file format to ___fbx___, including the **Meshes**, **Armatures**, **Animations**, **Materials**, etc.
 
 #### Prerequisite
 
@@ -76,6 +76,46 @@ Resolves the animations data and export to fbx, but doesn't export the meshes, j
 ```
 blender -b --python cgf2fbx.py -- --anim_only [CGF file]
 ```
+### cgf2fbx_batch.py
+
+The batch script to execute `cgf2fbx.py` for a batch convertion.
+
+#### Prerequisite
+
+The same as `cgf2fbx.py`.
+
+#### Usage
+
+The script for a batch convertion purpose, so execute in multi-thread(process) parallel mode.
+
+for usage help:
+
+
+```
+python cgf2fbx_batch.py --help
+```
+
+```
+Usage: cgf2fbx_batch.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -v, --verbose
+  -d DIRECTORY, --directory=DIRECTORY
+  -o OUTPUT_DIRECTORY, --output-directory=OUTPUT_DIRECTORY
+  -k, --keep-structure
+  -b BLENDER, --blender=BLENDER
+  -a, --anim
+  --anim_only
+  -s, --save-temp
+  --skeleton=SKELETON
+  --resolve-collapse-name
+  -j JOIN, --join=JOIN
+
+```
+
+`-d`, `--directory` is the **Game** assets directory which to deal with.
+`-k`, `--keep-structure` is converted output file follow the assets directory structure.
 
 ### dds2png.py
 
@@ -158,4 +198,5 @@ h322r16.py [H32 files ...]
 ```
 
 Specified `-o` to the `output` destination.
+
 

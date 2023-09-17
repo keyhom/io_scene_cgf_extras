@@ -172,7 +172,7 @@ def run(argv=None):
 
             output = get_output_path(cgf_path, keywords.directory, keywords.output_directory, keywords.keep_structure, keywords.resolve_collapse_name)
 
-            if os.path.isfile(output) or output.endswith('.cgf') or output.endswith('.caf'):
+            if os.path.isfile(output) or output.endswith('.cgf') or output.endswith('.cga') or output.endswith('.caf'):
                 output_dir = os.path.dirname(output)
             else:
                 output_dir = output
