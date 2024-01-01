@@ -3,6 +3,8 @@
 import os, sys, logging, optparse, multiprocessing, subprocess, re
 from subprocess import Popen, CalledProcessError, PIPE, STDOUT
 
+script_dir = os.path.abspath(os.path.normpath(os.path.expandvars(os.path.dirname(__file__))))
+
 stdout = None
 stderr = None
 
@@ -172,7 +174,7 @@ def run(argv=None):
 
             output = get_output_path(cgf_path, keywords.directory, keywords.output_directory, keywords.keep_structure, keywords.resolve_collapse_name)
 
-            if os.path.isfile(output) or output.endswith('.cgf') or output.endswith('.caf'):
+            if os.path.isfile(output) or output.endswith('.cgf') or output.endswith('.caf') or output.endswith('.cga'):
                 output_dir = os.path.dirname(output)
             else:
                 output_dir = output
@@ -183,7 +185,7 @@ def run(argv=None):
             except:
                 pass
 
-            commands.append([blender_executable, '-b', '--python', 'cgf2fbx.py', '--', '--output-directory=%s' % output_dir, cgf_path] + addition_args)
+            commands.append([blender_executable, '-b', '--python', os.path.join(script_dir, 'cgf2fbx.py'), '--', '--output-directory=%s' % output_dir, cgf_path] + addition_args)
 
     if len(commands):
         run_commands(commands)
