@@ -75,27 +75,6 @@ def read_h32(a_file, width, height, for_unity=False):
         bufread = 0
         data = []
 
-        image = None
-        #  image = Image.new('RGB', (width, height))
-
-        #  for x in range(width):
-        #  for y in range(height):
-        #  r, g, b = unpack(f, '<3B')
-        #  bufread = bufread + 3
-        #  image.paste((r, g, b), (y, x, y + 1, x + 1));
-        # image.paste((r, g, b), (x, y, x + 1, y + 1));
-
-        #  w  = int(image.size[0] * (2048.0/width))
-        #  h = int(image.size[1] * (2048.0/height))
-        #  image = image.resize((w, h))
-
-        #  for x in range(2048):
-        #  for y in range(2048):
-        #  r, g, b = image.getpixel((x, y))
-        #  h = g * 1.0 / 255.0 + r * 1.0 / 255.0 / 255.0 + b * 1.0 / 255.0 / 255.0 / 255.0 # GRB => Height(0~1)
-        #  h = int(h * 65535.0) # Range to unsigned short
-        #  data.append(h)
-
         if for_unity:
             x2 = math.ceil(math.log2(width))
             x2 = int(math.pow(2, x2)) + 1
@@ -105,23 +84,40 @@ def read_h32(a_file, width, height, for_unity=False):
             x2 = width
             y2 = height
 
+        #  image = None
+        if for_unity:
+            image = Image.new('RGB', (x2 - 1, y2 - 1))
+        else:
+            image = Image.new('RGB', (x2, y2))
+
         print('Extract to: %d x %d' % (x2, y2))
 
         for x in range(x2):
             if x >= width:
                 for y in range(y2):
                     data.append(0)
+                    if for_unity and (y < y2 - 1 and x < x2 - 1):
+                        image.putpixel((y, x), (0, 0, 0))
+                    elif not for_unity:
+                        image.putpixel((y, x), (0, 0, 0))
             else:
                 for y in range(y2):
                     if y >= height:
                         data.append(0)
+                        if for_unity and (y < y2 - 1 and x < x2 - 1):
+                            image.putpixel((y, x), (0, 0, 0))
+                        elif not for_unity:
+                            image.putpixel((y, x), (0, 0, 0))
                     else:
-                        r, g, b = unpack(f, '<3B')
+                        # b & g is a h16 value, r is a gray level range for detail layers index
+                        b, g, r = unpack(f, '<3B')
                         bufread = bufread + 3
+                        h = (b & 0xFF) | ((g << 8) & 0xFF00)
 
-                        h = g * 1.0 / 255.0 + r * 1.0 / 255.0 / 255.0 + b * \
-                            1.0 / 255.0 / 255.0 / 255.0  # GRB => Height(0~1)
-                        h = int(h * 65535.0)  # Range to unsigned short
+                        image.putpixel((y, x), (r, 0, 0))
+
+                        #  h = g * 1.0 / 255.0 + r * 1.0 / 255.0 / 255.0 + b * 1.0 / 255.0 / 255.0 / 255.0  # GRB => Height(0~1)
+                        #  h = int(h * 65535.0)  # Range to unsigned short
                         data.append(h)
 
         # assert bufread == bufsize, "There're remaining %i buffer size, incorrect resolution specified?" % (bufsize - bufread)
@@ -134,6 +130,47 @@ def do_convert(input_file, width, height, for_unity, output_file):
 
     if image:
         image.save(output_file + '.png')
+
+        # Split as splat maps.
+        splat_maps = {}
+        for x in range(image.width):
+            for y in range(image.height):
+                r, g, b = image.getpixel((x, y))
+                a = 0
+                splat_idx = int(math.floor(r / 4))
+
+                if r >= 32:
+                    continue
+
+                splat_sub_idx = r % 4
+                if splat_sub_idx == 1:
+                    r = 0
+                    g = 255
+                    b = 0
+                    a = 0
+                elif splat_sub_idx == 2:
+                    r = 0
+                    g = 0
+                    b = 255
+                    a = 0
+                elif splat_sub_idx == 3:
+                    r = 0
+                    g = 0
+                    b = 0
+                    a = 255
+                else:
+                    r = 255
+                    g = 0
+                    b = 0
+                    a = 0
+
+                if not splat_idx in splat_maps:
+                    splat_maps[splat_idx] = Image.new('RGBA', (image.width, image.height))
+                splat_maps[splat_idx].putpixel((x, y), (r, g, b, a))
+
+        for i, v in splat_maps.items():
+            v = v.rotate(90)
+            v.save('%s_s%d.png' % (output_file, i))
 
     if data:
         logging.debug("The final output path is: %s" % output_file)

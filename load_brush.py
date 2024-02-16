@@ -13,6 +13,7 @@ def unpack(fio, fmt):
 
 class Brush:
     _unk1_s = []
+    _cgf_filenames = []
     _lines = []
     _line2s = []
 
@@ -38,6 +39,9 @@ class Brush:
 
         keywords, positional = parser.parse_args(argv)
 
+        if keywords.verbose:
+            self._verbose = True
+
         if self._verbose:
             logging.root.setLevel(logging.DEBUG)
         else:
@@ -49,9 +53,6 @@ class Brush:
             logging.debug('No specified for output path, so fallback to the cwd: %s' % self._output_path)
         else:
             self._output_path = keywords.output
-
-        if keywords.verbose:
-            self._verbose = True
 
         if len(positional) > 0:
             self._brush_file = positional[0] # Only first brush file available.
@@ -81,6 +82,7 @@ class Brush:
                 unk1_segment, = unpack(f, '<%ds' % (sl - 4))
                 unk1_str = unk1_segment[:unk1_segment.find(0x00)]
                 self._unk1_s.append(unk1_str.decode())
+                logging.debug('unk1_s[%d] = %s' % (i, self._unk1_s[i]))
 
             unk2_len, = unpack(f, '<i')
             logging.debug('Unk2 len %d' % unk2_len)
@@ -94,6 +96,7 @@ class Brush:
                 # t, maybe the type of respected.
                 # f1 - f6, the bouding-box squre meaning.
                 t, f1, f2, f3, f4, f5, f6 = struct.unpack_from('<iffffff', buf)
+                self._cgf_filenames.append(filename.decode())
 
                 self._lines.append('%d,%s,%d,%f,%f,%f,%f,%f,%f\n' % (i + 1, filename.decode(), t, f1, f2, f3, f4, f5, f6))
 
@@ -104,7 +107,9 @@ class Brush:
                 datas = struct.unpack_from('<iii4B4Bi12f4i', unk3_segment)
                 # logging.debug(len(datas))
                 # logging.debug(datas)
-                self._line2s.append(',%d,%d,%d,%x,%x,%x,%x,%x,%x,%x,%x,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d,%d,%d\n' % datas)
+                line_val = ',%d,%d,%d,%x,%x,%x,%x,%x,%x,%x,%x,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d,%d,%d\n' % datas
+                line_val = '%d,%s%s' % (i + 1, self._cgf_filenames[datas[2]], line_val)
+                self._line2s.append(line_val)
 
             if bytes_total - f.tell() == 0:
                 logging.info('All bytes parsed.')
