@@ -24,7 +24,7 @@ class Brush:
     _parser = None
 
     def __init__(self):
-        self._lines.append('#,fileName,collision type?,bb_x1,bb_y1,bb_z1,bb_x2,bb_y2,bb_z2\n')
+        self._lines.append('#,fileName,collision type?,bb_x1,bb_y1(z),bb_z1(y),bb_x2,bb_y2(z),bb_z2(y)\n')
         self._line2s.append('#,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n')
 
     def parse_arguments(self):
@@ -101,13 +101,13 @@ class Brush:
                 self._lines.append('%d,%s,%d,%f,%f,%f,%f,%f,%f\n' % (i + 1, filename.decode(), t, f1, f2, f3, f4, f5, f6))
 
             unk3_len, = unpack(f, '<i')
-            logging.debug('CurPos: %d, Remaining %d bytes' % (f.tell(), bytes_total - f.tell()), unk3_len)
+            logging.debug('CurPos: %d, Remaining %d bytes, %d segment found, %d bytes needed.' % (f.tell(), bytes_total - f.tell(), unk3_len, unk3_len * 88))
             for i in range(unk3_len):
                 unk3_segment, = unpack(f, '<88s')
-                datas = struct.unpack_from('<iii4B4Bi12f4i', unk3_segment)
+                datas = struct.unpack_from('<iii4B4Bi12f3BHLBH', unk3_segment)
                 # logging.debug(len(datas))
                 # logging.debug(datas)
-                line_val = ',%d,%d,%d,%x,%x,%x,%x,%x,%x,%x,%x,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d,%d,%d\n' % datas
+                line_val = ',%d,%d,%d,%x,%x,%x,%x,%x,%x,%x,%x,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%x,%x,%x,%d,%u,%x,%d\n' % datas
                 line_val = '%d,%s%s' % (i + 1, self._cgf_filenames[datas[2]], line_val)
                 self._line2s.append(line_val)
 
