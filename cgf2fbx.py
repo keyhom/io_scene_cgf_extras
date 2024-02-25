@@ -63,7 +63,7 @@ def run(argv=None):
     (keywords, positional) = parser.parse_args(argv)
 
     # Force the render engine to CYCLES
-    bpy.context.scene.render.engine = 'CYCLES'
+    # bpy.context.scene.render.engine = 'CYCLES'
 
     # Clear the scene first.
     if not bpy_in_locale:
@@ -107,7 +107,7 @@ def run(argv=None):
         else:
             bpy.ops.import_scene.cgf(filepath=os.path.abspath(keywords.skeleton), import_animations=False)
 
-    bpy.ops.import_scene.cgf(filepath=sFilePath, import_animations=bIncludeAnimations)
+    bpy.ops.import_scene.cgf(filepath=sFilePath, import_animations=bIncludeAnimations, convert_dds_to_png=True, reuse_materials=True, reuse_images=True)
 
     if bpy_in_locale or keywords.no_output: # No export instead.
         return
