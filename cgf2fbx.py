@@ -43,7 +43,7 @@ def run(argv=None):
             default=False,
             action='store_true')
 
-    parser.add_option('--output-directory',
+    parser.add_option('-o', '--output-directory',
             type='string', action='store', dest='output_directory',
             )
 
@@ -154,13 +154,13 @@ def run(argv=None):
             bake_anim_use_nla_strips = True,
             bake_anim_use_all_actions = True,
             bake_anim_force_startend_keying = True,
-            bake_anim_step = 2,
+            bake_anim_step = 1,
             bake_anim_simplify_factor = 1,
-            use_anim = True,
-            use_anim_action_all = True,
-            use_default_take = True,
-            use_anim_optimize = True,
-            anim_optimize_precision = 6,
+            # use_anim = True,
+            # use_anim_action_all = True,
+            # use_default_take = True,
+            # use_anim_optimize = True,
+            # anim_optimize_precision = 6,
         )
 
     if bSaveTemp:

@@ -165,6 +165,7 @@ def run(argv=None):
     if len(cgf_lists):
         for cgf_path in cgf_lists:
             cgf_path = cgf_path.replace('\n', '').replace('\r', '')
+            cgf_path = cgf_path.replace('\\', '/').replace('//', '/')
             exists = os.path.exists(cgf_path)
             sign_char = 'x' if os.path.exists(cgf_path) else ' '
             logging.debug('    [%s] %s' % (sign_char, cgf_path))
