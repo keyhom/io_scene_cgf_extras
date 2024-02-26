@@ -30,6 +30,14 @@ except:
     curdir = ''
 
 def get_output_path(src_path, src_dir, dest_dir, follow=False, resolve_collapse_name=False):
+    src_path = os.path.normpath(src_path)
+    src_dir = os.path.normpath(src_dir)
+    dest_dir = os.path.normpath(dest_dir)
+
+    print(f'src_path: {src_path}')
+    print(f'src_dir: {src_dir}')
+    print(f'dest_dir: {dest_dir}')
+
     if not follow:
         exts = os.path.splitext(src_path)
         ext = '.cgf'
@@ -41,6 +49,8 @@ def get_output_path(src_path, src_dir, dest_dir, follow=False, resolve_collapse_
             path = os.path.relpath(src_path, src_dir)
         else:
             path = src_path
+
+        print(f'relpath: {path}')
 
         target_path = os.path.join(dest_dir, path)
         if resolve_collapse_name is True:
@@ -136,6 +146,12 @@ def run(argv=None):
         else:
             bSkeletonLoad = True
 
+    if keywords.directory:
+        keywords.directory = os.path.normpath(keywords.directory)
+
+    if keywords.output_directory:
+        keywords.output_directory = os.path.normpath(keywords.output_directory)
+
     if keywords.verbose:
         print("Input file: %s" % sFilePath)
         print("Skeleton: %s" % keywords.skeleton)
@@ -161,18 +177,23 @@ def run(argv=None):
         return
 
     if keywords.output_directory:
+        sFilePath = os.path.normpath(sFilePath)
+        print(f'NormPath for sFilePath: {sFilePath}')
         fbx_filepath = get_output_path(sFilePath, keywords.directory, keywords.output_directory, keywords.keep_structure)
         # fbx_filepath = os.path.join(os.path.abspath(os.path.expanduser(keywords.output_directory)),
                                     # os.path.splitext(os.path.basename(sFilePath))[0].lower())
-    fbx_filepath = os.path.splitext(fbx_filepath)[0].lower()
-
-    print(f'fbx_filepath: {fbx_filepath}')
+    fbx_filepath = os.path.splitext(fbx_filepath)[0]
 
     output_dir = os.path.dirname(fbx_filepath)
 
+    # lower the basename by default.
+    fbx_filepath = os.path.normpath(os.path.join(output_dir, os.path.basename(fbx_filepath).lower()))
+
+    print(f'fbx_filepath: {fbx_filepath}')
+
     if not os.path.exists(output_dir):
         try:
-            os.makedirs(output_dir)
+            os.makedirs(output_dir, exist_ok=True)
         except:
             pass
 
@@ -224,11 +245,12 @@ def run(argv=None):
         '''
         for im in bpy.data.images:
             if im.source == 'FILE' and im.type == 'IMAGE' and len(im.filepath_raw) > 0:
-                print(f'[{im.name}] ({im.source}) {im.filepath_raw}')
+                filepath_raw = os.path.normpath(im.filepath_raw)
+                print(f'[{im.name}] ({im.source}) {filepath_raw}')
                 dir_path = None
                 if keywords.directory:
-                    if im.filepath_raw.lower().startswith(keywords.directory.lower()):
-                        rel_path = im.filepath_raw[len(keywords.directory):]
+                    if filepath_raw.lower().startswith(keywords.directory.lower()):
+                        rel_path = filepath_raw[len(keywords.directory):]
                         while rel_path.startswith(os.path.sep):
                             rel_path = rel_path[1:]
                         if keywords.output_directory:
@@ -240,9 +262,15 @@ def run(argv=None):
                     dir_path = output_dir
 
                 os.makedirs(dir_path, exist_ok=True)
-                print(
-                    f'Copy the src "{im.filepath_raw}" to the dest "{dir_path}"')
-                shutil.copy2(im.filepath_raw, dir_path)
+                filepath_target = os.path.join(dir_path, os.path.basename(filepath_raw))
+                print(f'Copy the src "{filepath_raw}" to the dest "{filepath_target}"')
+                try:
+                    shutil.copy2(filepath_raw, filepath_target)
+                    print(f'Successfully copied and overwrote {filepath_raw} to {filepath_target}')
+                except FileNotFoundError:
+                    print(f'Error: The source file {filepath_raw} does not exist.')
+                except Exception as e:
+                    print(f'Error: {e}')
 
 
 if __name__ == '__main__':
