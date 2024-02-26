@@ -56,7 +56,8 @@ def process_arguments(argv):
     parser.add_option('--anim_only', default=False, action='store_true')
     parser.add_option('-s', '--save-temp', default=False, action='store_true')
     parser.add_option('--skeleton', default=None, type='string', action='store')
-    parser.add_option('--resolve-collapse-name', default=False, action='store_true', dest='resolve_collapse_name')
+    # parser.add_option('--resolve-collapse-name', default=False, action='store_true', dest='resolve_collapse_name')
+    parser.add_option('--copy-textures', default=False, action='store_true', dest='copy_textures')
 
     parser.add_option('-j', '--join', default=0, action='store', type='int')
 
@@ -152,6 +153,9 @@ def run(argv=None):
 
     addition_args = []
 
+    if keywords.directory:
+        keywords.directory = os.path.expanduser(keywords.directory)
+        addition_args.append('--directory=%s' % keywords.directory)
     if keywords.anim:
         addition_args.append('--anim')
     if keywords.anim_only:
@@ -161,6 +165,10 @@ def run(argv=None):
     if keywords.skeleton:
         keywords.skeleton = os.path.expanduser(keywords.skeleton)
         addition_args.append('--skeleton=%s' % keywords.skeleton)
+    if keywords.copy_textures:
+        addition_args.append('--copy-textures')
+    if keywords.keep_structure:
+        addition_args.append('--keep-structure')
 
     if len(cgf_lists):
         for cgf_path in cgf_lists:
@@ -174,12 +182,13 @@ def run(argv=None):
             if not exists:
                 continue
 
-            output = get_output_path(cgf_path, keywords.directory, keywords.output_directory, keywords.keep_structure, keywords.resolve_collapse_name)
+            # output = get_output_path(cgf_path, keywords.directory, keywords.output_directory, keywords.keep_structure, keywords.resolve_collapse_name)
 
-            if os.path.isfile(output) or output.endswith('.cgf') or output.endswith('.caf') or output.endswith('.cga'):
-                output_dir = os.path.dirname(output)
-            else:
-                output_dir = output
+            # if os.path.isfile(output) or output.endswith('.cgf') or output.endswith('.caf') or output.endswith('.cga'):
+            #     output_dir = os.path.dirname(output)
+            # else:
+            #     output_dir = output
+            output_dir = keywords.output_directory
 
             logging.debug('    Output: %s' % output_dir)
             try:
