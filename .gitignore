@@ -8,3 +8,7 @@ __pycache__/
 .venv/
 .win_env/
 .win_venv/
+*.lst
+*.csv
+myenv
+.vscode/launch.json
