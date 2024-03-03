@@ -77,6 +77,13 @@ def process_arguments(argv):
 
     return (parser, keywords, positional)
 
+def norm_path(path:str) -> str|None:
+    origin_path = path
+    path = os.path.normpath(path)
+    if os.path.sep == '/':
+        path = path.replace('\\', '/').replace("//", '/')
+    return path
+
 def get_output_path(src_path, src_dir, dest_dir, follow=False, resolve_collapse_name=False):
     if not follow:
         exts = os.path.splitext(src_path)
@@ -154,12 +161,12 @@ def run(argv=None):
     addition_args = []
 
     if keywords.output_directory:
-        keywords.output_directory = os.path.normpath(keywords.output_directory)
+        keywords.output_directory = norm_path(keywords.output_directory)
         keywords.output_directory = os.path.expanduser(keywords.output_directory)
         addition_args.append('--output-directory=%s' % keywords.output_directory)
     if keywords.directory:
         keywords.directory = os.path.expanduser(keywords.directory)
-        keywords.directory = os.path.normpath(keywords.directory)
+        keywords.directory = norm_path(keywords.directory)
         addition_args.append('--directory=%s' % keywords.directory)
     if keywords.anim:
         addition_args.append('--anim')
@@ -169,6 +176,7 @@ def run(argv=None):
         addition_args.append('--save-temp')
     if keywords.skeleton:
         keywords.skeleton = os.path.expanduser(keywords.skeleton)
+        keywords.skeleton = norm_path(keywords.skeleton)
         addition_args.append('--skeleton=%s' % keywords.skeleton)
     if keywords.copy_textures:
         addition_args.append('--copy-textures')
@@ -178,7 +186,7 @@ def run(argv=None):
     if len(cgf_lists):
         for cgf_path in cgf_lists:
             cgf_path = cgf_path.replace('\n', '').replace('\r', '')
-            cgf_path = os.path.normpath(cgf_path)
+            cgf_path = norm_path(cgf_path)
             exists = os.path.exists(cgf_path)
             sign_char = 'x' if os.path.exists(cgf_path) else ' '
             logging.debug('    [%s] %s' % (sign_char, cgf_path))
