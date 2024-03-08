@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-import os, sys, multiprocessing, subprocess
+import os, sys, subprocess
 from subprocess import Popen, CalledProcessError, PIPE, STDOUT
+# from multiprocessing import Pool, TimeoutError, cpu_count
+from multiprocess import Pool, TimeoutError, cpu_count
 
 class CommandExecutor:
 
-    CORES = multiprocessing.cpu_count()
+    CORES = cpu_count()
 
     def __init__(self):
         pass
@@ -23,7 +25,7 @@ class CommandExecutor:
             for command in commands:
                 self.call_process(command)
         else:
-            pool = multiprocessing.Pool(processes = cores)
+            pool = Pool(processes = cores)
             pool.map(self.call_process, commands, chunksize = 1)
             pool.close()
             pool.join()

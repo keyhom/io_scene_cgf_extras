@@ -3,6 +3,8 @@
 import os, sys, logging, optparse, multiprocessing, subprocess, re
 from subprocess import Popen, CalledProcessError, PIPE, STDOUT
 
+script_dir = os.path.abspath(os.path.normpath(os.path.expandvars(os.path.dirname(__file__))))
+
 stdout = None
 stderr = None
 
@@ -54,7 +56,8 @@ def process_arguments(argv):
     parser.add_option('--anim_only', default=False, action='store_true')
     parser.add_option('-s', '--save-temp', default=False, action='store_true')
     parser.add_option('--skeleton', default=None, type='string', action='store')
-    parser.add_option('--resolve-collapse-name', default=False, action='store_true', dest='resolve_collapse_name')
+    # parser.add_option('--resolve-collapse-name', default=False, action='store_true', dest='resolve_collapse_name')
+    parser.add_option('--copy-textures', default=False, action='store_true', dest='copy_textures')
 
     parser.add_option('-j', '--join', default=0, action='store', type='int')
 
@@ -73,6 +76,13 @@ def process_arguments(argv):
         print()
 
     return (parser, keywords, positional)
+
+def norm_path(path:str) -> str|None:
+    origin_path = path
+    path = os.path.normpath(path)
+    if os.path.sep == '/':
+        path = path.replace('\\', '/').replace("//", '/')
+    return path
 
 def get_output_path(src_path, src_dir, dest_dir, follow=False, resolve_collapse_name=False):
     if not follow:
@@ -150,6 +160,14 @@ def run(argv=None):
 
     addition_args = []
 
+    if keywords.output_directory:
+        keywords.output_directory = norm_path(keywords.output_directory)
+        keywords.output_directory = os.path.expanduser(keywords.output_directory)
+        addition_args.append('--output-directory=%s' % keywords.output_directory)
+    if keywords.directory:
+        keywords.directory = os.path.expanduser(keywords.directory)
+        keywords.directory = norm_path(keywords.directory)
+        addition_args.append('--directory=%s' % keywords.directory)
     if keywords.anim:
         addition_args.append('--anim')
     if keywords.anim_only:
@@ -158,11 +176,17 @@ def run(argv=None):
         addition_args.append('--save-temp')
     if keywords.skeleton:
         keywords.skeleton = os.path.expanduser(keywords.skeleton)
+        keywords.skeleton = norm_path(keywords.skeleton)
         addition_args.append('--skeleton=%s' % keywords.skeleton)
+    if keywords.copy_textures:
+        addition_args.append('--copy-textures')
+    if keywords.keep_structure:
+        addition_args.append('--keep-structure')
 
     if len(cgf_lists):
         for cgf_path in cgf_lists:
             cgf_path = cgf_path.replace('\n', '').replace('\r', '')
+            cgf_path = norm_path(cgf_path)
             exists = os.path.exists(cgf_path)
             sign_char = 'x' if os.path.exists(cgf_path) else ' '
             logging.debug('    [%s] %s' % (sign_char, cgf_path))
@@ -170,20 +194,21 @@ def run(argv=None):
             if not exists:
                 continue
 
-            output = get_output_path(cgf_path, keywords.directory, keywords.output_directory, keywords.keep_structure, keywords.resolve_collapse_name)
+            # output = get_output_path(cgf_path, keywords.directory, keywords.output_directory, keywords.keep_structure, keywords.resolve_collapse_name)
 
-            if os.path.isfile(output) or output.endswith('.cgf') or output.endswith('.cga') or output.endswith('.caf'):
-                output_dir = os.path.dirname(output)
-            else:
-                output_dir = output
+            # if os.path.isfile(output) or output.endswith('.cgf') or output.endswith('.caf') or output.endswith('.cga'):
+            #     output_dir = os.path.dirname(output)
+            # else:
+            #     output_dir = output
+            output_dir = keywords.output_directory
 
             logging.debug('    Output: %s' % output_dir)
             try:
-                os.makedirs(output_dir)
+                os.makedirs(output_dir, exist_ok=True)
             except:
                 pass
 
-            commands.append([blender_executable, '-b', '--python', 'cgf2fbx.py', '--', '--output-directory=%s' % output_dir, cgf_path] + addition_args)
+            commands.append([blender_executable, '-b', '--python', os.path.join(script_dir, 'cgf2fbx.py'), '--', cgf_path] + addition_args)
 
     if len(commands):
         run_commands(commands)

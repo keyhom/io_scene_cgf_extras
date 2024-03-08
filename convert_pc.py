@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 from __future__ import print_function
-import os, sys, logging, struct, subprocess, multiprocessing, shutil, re
+import os, sys, logging, shutil, re
 import argparse
 from commands import CommandExecutor
 
