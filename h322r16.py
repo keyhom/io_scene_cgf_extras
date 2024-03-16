@@ -129,8 +129,6 @@ def do_convert(input_file, width, height, for_unity, output_file):
     data, image, x2, y2 = read_h32(input_file, width, height, for_unity)
 
     if image:
-        image.save(output_file + '.png')
-
         # Split as splat maps.
         splat_maps = {}
         for x in range(image.width):
@@ -171,6 +169,9 @@ def do_convert(input_file, width, height, for_unity, output_file):
         for i, v in splat_maps.items():
             v = v.rotate(90)
             v.save('%s_s%d.png' % (output_file, i))
+
+        image = image.rotate(90)
+        image.save(output_file + '.png')
 
     if data:
         logging.debug("The final output path is: %s" % output_file)
